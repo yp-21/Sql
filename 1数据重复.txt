@@ -1,0 +1,48 @@
+问题一：当数据重复时，只提取重复数据的一条数据。
+问题二：当数据重复时，将重复的数据删除，在表中只保留唯一的数据。
+
+数据准备：
+create table test_table(
+student_id varchar2(100),
+student_name varchar2(100),
+subject varchar2(100),
+score varchar2(100)
+);
+ 
+insert into test_Table values('001','zhangsan','yuwen','90');
+insert into test_Table values('001','zhangsan','yuwen','90');
+insert into test_Table values('001','zhangsan','yuwen','90');
+insert into test_Table values('001','zhangsan','yuwen','90');
+insert into test_Table values('001','zhangsan','yuwen','90');
+insert into test_Table values('002','lisi','shuxue','990');
+insert into test_Table values('002','lisi','shuxue','990');
+insert into test_Table values('002','lisi','shuxue','990');
+insert into test_Table values('002','lisi','shuxue','990');
+insert into test_Table values('003','chaoren','yingyu','111');
+insert into test_Table values('003','chaoren','yingyu','111');
+insert into test_Table values('003','chaoren','yingyu','111');
+insert into test_Table values('003','chaoren','yingyu','111');
+insert into test_Table values('004','hha','didi','12');
+commit;
+
+问题一：当数据重复时，只提取重复数据的一条数据。
+SELECT TMP.STUDENT_ID, TMP.STUDENT_NAME, TMP.SUBJECT, TMP.SCORE
+  FROM (SELECT T.*,
+               ROW_NUMBER() OVER(PARTITION BY T.STUDENT_ID, T.STUDENT_NAME, T.SUBJECT, T.SCORE ORDER BY T.SCORE DESC) FLAG
+          FROM TEST_TABLE T) TMP
+ WHERE FLAG = '1';
+
+问题二：当数据重复时，将重复的数据删除，在表中只保留唯一的数据。
+
+DELETE FROM TEST_TABLE A
+ WHERE (A.STUDENT_ID, A.STUDENT_NAME, A.SUBJECT, A.SCORE) IN
+       (SELECT STUDENT_ID, STUDENT_NAME, SUBJECT, SCORE
+          FROM TEST_TABLE
+         GROUP BY STUDENT_ID, STUDENT_NAME, SUBJECT, SCORE
+        HAVING COUNT(*) > 1)
+   AND ROWID NOT IN (SELECT MIN(ROWID)
+                       FROM TEST_TABLE
+                      GROUP BY STUDENT_ID, STUDENT_NAME, SUBJECT, SCORE
+                     HAVING COUNT(*) > 1);
+COMMIT;
+SELECT * FROM TEST_TABLE;
